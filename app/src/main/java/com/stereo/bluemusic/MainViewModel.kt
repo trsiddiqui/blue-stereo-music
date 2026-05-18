@@ -1,6 +1,7 @@
 package com.stereo.bluemusic
 
 import androidx.lifecycle.ViewModel
+import com.stereo.bluemusic.data.BluetoothDeviceInfo
 import com.stereo.bluemusic.data.PlayerUiState
 import com.stereo.bluemusic.data.Song
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,46 @@ class MainViewModel : ViewModel() {
 
     fun addToHistory(song: Song) {
         _uiState.update { it.copy(history = listOf(song) + it.history.take(19), song = song) }
+    }
+
+    fun recordMediaAction(action: String, success: Boolean) {
+        _uiState.update {
+            it.copy(
+                isPlaying = if (action == "Play/Pause" && success) !it.isPlaying else it.isPlaying,
+                actionMessage = if (success) "$action sent to Bluetooth audio" else "$action was blocked by this stereo"
+            )
+        }
+    }
+
+    fun updateBluetooth(
+        enabled: Boolean,
+        stereoName: String,
+        pairedDevices: List<BluetoothDeviceInfo>
+    ) {
+        val connected = pairedDevices.firstOrNull()?.name ?: if (enabled) "Ready for phone media" else "Bluetooth is off"
+        _uiState.update {
+            it.copy(
+                bluetoothEnabled = enabled,
+                stereoName = stereoName,
+                pairedDevices = pairedDevices,
+                connectedDevice = connected,
+                actionMessage = if (enabled) "Bluetooth ready" else "Turn on Bluetooth"
+            )
+        }
+    }
+
+    fun updateDiscoveredDevices(devices: List<BluetoothDeviceInfo>, scanning: Boolean) {
+        _uiState.update {
+            it.copy(
+                discoveredDevices = devices,
+                isScanning = scanning,
+                actionMessage = if (scanning) "Scanning nearby devices" else "Scan complete"
+            )
+        }
+    }
+
+    fun showAction(message: String) {
+        _uiState.update { it.copy(actionMessage = message) }
     }
 
     fun setEq(bass: Float? = null, mid: Float? = null, treble: Float? = null) {

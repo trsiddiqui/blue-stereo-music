@@ -142,7 +142,8 @@ class MainActivity : ComponentActivity() {
                     onMakeDiscoverable = { makeStereoDiscoverable() },
                     onScan = { startBluetoothScan() },
                     onOpenSettings = { openBluetoothSettings() },
-                    onPairDevice = { pairDevice(it) }
+                    onPairDevice = { pairDevice(it) },
+                    onNativeBluetoothSource = { openNativeBluetoothMusicSource() }
                 )
             }
         }
@@ -185,7 +186,39 @@ class MainActivity : ComponentActivity() {
 
     private fun sendMediaAction(action: String, command: MediaSessionBridgeService.() -> Boolean) {
         val success = mediaBridge?.command() ?: false
+        if (!success) {
+            openNativeBluetoothMusicSource(showSuccess = false)
+        }
         vm.recordMediaAction(action, success)
+    }
+
+    private fun openNativeBluetoothMusicSource(showSuccess: Boolean = true): Boolean {
+        val candidates = listOf(
+            ComponentName("com.ts.MainUI", "com.ts.bt.BtMusicActivity"),
+            ComponentName("com.ts.MainUI", "com.ts.bt.BtActivity"),
+            ComponentName("com.ts.bt", "com.ts.bt.BtMusicActivity"),
+            ComponentName("com.ts.bt", "com.ts.bt.BtActivity")
+        )
+
+        candidates.forEach { component ->
+            val intent = Intent().apply {
+                this.component = component
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            }
+            val opened = runCatching {
+                startActivity(intent)
+                true
+            }.getOrDefault(false)
+            if (opened) {
+                if (showSuccess) {
+                    vm.showAction("8227L Bluetooth music source opened")
+                }
+                return true
+            }
+        }
+
+        vm.showAction("Could not open 8227L Bluetooth source")
+        return false
     }
 
     @SuppressLint("MissingPermission")
@@ -362,7 +395,8 @@ private fun CarStereoApp(
     onMakeDiscoverable: () -> Unit,
     onScan: () -> Unit,
     onOpenSettings: () -> Unit,
-    onPairDevice: (String) -> Unit
+    onPairDevice: (String) -> Unit,
+    onNativeBluetoothSource: () -> Unit
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     val tabs = listOf("Music", "Bluetooth", "Game")
@@ -388,8 +422,8 @@ private fun CarStereoApp(
             }
 
             when (selectedTab) {
-                0 -> MusicScreen(ui, onPrevious, onPlayPause, onNext, onFavorite, onAddToPlaylist, onHistory, onEq)
-                1 -> BluetoothScreen(ui, onMakeDiscoverable, onScan, onOpenSettings, onPairDevice)
+                0 -> MusicScreen(ui, onPrevious, onPlayPause, onNext, onFavorite, onAddToPlaylist, onHistory, onEq, onNativeBluetoothSource)
+                1 -> BluetoothScreen(ui, onMakeDiscoverable, onScan, onOpenSettings, onPairDevice, onNativeBluetoothSource)
                 else -> GameScreen()
             }
         }
@@ -405,7 +439,8 @@ private fun MusicScreen(
     onFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onHistory: (Song) -> Unit,
-    onEq: (Float?, Float?, Float?) -> Unit
+    onEq: (Float?, Float?, Float?) -> Unit,
+    onNativeBluetoothSource: () -> Unit
 ) {
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Surface(
@@ -427,6 +462,9 @@ private fun MusicScreen(
                 Text(ui.song.title, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 Text("${ui.song.artist} / ${ui.song.album}", color = Color(0xFFA6C8D1), fontSize = 17.sp)
                 Text("Source: ${ui.connectedDevice}", color = Color(0xFF9AD7FF), fontSize = 16.sp)
+                Button(onClick = onNativeBluetoothSource, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Text("Activate 8227L BT Source")
+                }
             }
         }
 
@@ -474,7 +512,8 @@ private fun BluetoothScreen(
     onMakeDiscoverable: () -> Unit,
     onScan: () -> Unit,
     onOpenSettings: () -> Unit,
-    onPairDevice: (String) -> Unit
+    onPairDevice: (String) -> Unit,
+    onNativeBluetoothSource: () -> Unit
 ) {
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFF0F222B), modifier = Modifier.weight(0.9f).fillMaxSize()) {
@@ -492,6 +531,9 @@ private fun BluetoothScreen(
                 }
                 Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth().height(54.dp)) {
                     Text("Open Bluetooth Settings")
+                }
+                Button(onClick = onNativeBluetoothSource, modifier = Modifier.fillMaxWidth().height(54.dp)) {
+                    Text("Open 8227L BT Music")
                 }
             }
         }

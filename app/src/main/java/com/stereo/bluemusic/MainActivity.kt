@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                             onClick = { vm.addToHistory(song) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("${song.title} • ${song.artist}")
+                            Text("${song.title} - ${song.artist}")
                         }
                     }
                 }

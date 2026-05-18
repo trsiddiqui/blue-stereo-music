@@ -1,6 +1,7 @@
 package com.stereo.bluemusic.service
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -15,7 +16,7 @@ class MediaSessionBridgeService : Service() {
     }
 
     private fun activeController(): MediaController? {
-        val manager = getSystemService(MediaSessionManager::class.java)
+        val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
         return manager?.getActiveSessions(null)?.firstOrNull()
     }
 

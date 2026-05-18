@@ -30,20 +30,27 @@ import com.stereo.bluemusic.service.MediaSessionBridgeService
 class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
     private var mediaBridge: MediaSessionBridgeService? = null
+    private var serviceBound = false
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            mediaBridge = (binder as MediaSessionBridgeService.LocalBinder).service()
+            mediaBridge = (binder as? MediaSessionBridgeService.LocalBinder)?.service()
+            serviceBound = mediaBridge != null
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             mediaBridge = null
+            serviceBound = false
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bindService(Intent(this, MediaSessionBridgeService::class.java), connection, Context.BIND_AUTO_CREATE)
+        serviceBound = bindService(
+            Intent(this, MediaSessionBridgeService::class.java),
+            connection,
+            Context.BIND_AUTO_CREATE
+        )
 
         setContent {
             val ui by vm.uiState.collectAsState()
@@ -87,7 +94,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unbindService(connection)
+        if (serviceBound) {
+            unbindService(connection)
+            serviceBound = false
+        }
     }
 }
 

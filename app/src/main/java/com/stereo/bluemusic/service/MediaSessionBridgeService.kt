@@ -3,10 +3,10 @@ package com.stereo.bluemusic.service
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.session.MediaController
-import android.media.session.MediaSessionManager
+import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
+import android.view.KeyEvent
 
 class MediaSessionBridgeService : Service() {
     private val binder = LocalBinder()
@@ -15,20 +15,18 @@ class MediaSessionBridgeService : Service() {
         fun service(): MediaSessionBridgeService = this@MediaSessionBridgeService
     }
 
-    private fun activeController(): MediaController? {
-        val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-        return manager?.getActiveSessions(null)?.firstOrNull()
-    }
+    private fun sendMediaKey(keyCode: Int): Boolean = runCatching {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
+        audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
+        true
+    }.getOrDefault(false)
 
-    fun playPause() {
-        val transport = activeController()?.transportControls ?: return
-        val state = activeController()?.playbackState?.state
-        if (state == android.media.session.PlaybackState.STATE_PLAYING) transport.pause() else transport.play()
-    }
+    fun playPause(): Boolean = sendMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
 
-    fun next() = activeController()?.transportControls?.skipToNext()
+    fun next(): Boolean = sendMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
 
-    fun previous() = activeController()?.transportControls?.skipToPrevious()
+    fun previous(): Boolean = sendMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
 
     override fun onBind(intent: Intent?): IBinder = binder
 }
